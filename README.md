@@ -1,11 +1,12 @@
 # SS Task Loader
 
-A small Android app that loads task files from [SoaringScoring](https://soaringscoring.com)'s
-Public API straight into XCSoar (and XCSoar Jet), so you don't have to download and
-copy a `.tsk` file by hand each contest day.
+A small Android app largely based on [XComps](https://github.com/DanielDe8/xcomps) 
+that loads task files from [SoaringScoring](https://soaringscoring.com)'s Public API 
+straight into XCSoar (and XCSoar Jet), so you don't have to download and copy a 
+`.tsk` file by hand each contest day.
 
-Same idea as [xcomps](https://github.com/DanielDe8/xcomps), just built native
-(Kotlin + Jetpack Compose) against SoaringScoring instead of SoaringSpot/GlideAndSeek.
+Same idea as XComps, just built native (Kotlin + Jetpack Compose) against SoaringScoring
+instead of SoaringSpot/GlideAndSeek.
 
 ## What it does
 
@@ -22,13 +23,8 @@ Same idea as [xcomps](https://github.com/DanielDe8/xcomps), just built native
    `<that folder>/Tasks/soaringscoring_task.tsk`, overwriting each time —
    same filename-per-overwrite pattern as xcomps.
 
-## Status / what's stubbed
-
-**You don't have an API key yet**, so steps 1 and 3 work today, but step 2/4
-will show a clear "add an API key" or `INVALID_API_KEY` message until
-SoaringScoring issues you one (there's no self-serve signup — contact the
-SoaringScoring team, they mint keys from `dev.soaringscoring.com/#/admin`).
-Nothing else needs to change once you have it — just paste it into Settings.
+## Status
+Functional.
 
 ## Project layout
 
@@ -47,35 +43,16 @@ app/src/main/java/com/soaringscoring/taskloader/
 Since SoaringScoring is issuing one key to the app rather than one per user,
 the key is baked in at build time rather than typed in by each person:
 
-1. Copy `local.properties.example` to `local.properties` (already gitignored)
-   and put the real key in `ss.apiKey=...`.
+1. `local.properties` (already gitignored) holds the real key in `ss.apiKey=...`.
 2. `app/build.gradle.kts` reads that into `BuildConfig.SS_API_KEY`.
 3. `AppViewModel` uses that as the default; the Settings screen only holds a
    *personal override*, for testing with your own key later — most users
    will never open it.
 
-**Security tradeoff, worth knowing going in:** a key baked into an installed
-APK can always be extracted (decompiling, `strings` on the binary, or a
-network proxy) — obfuscation and R8 (`isMinifyEnabled = true` in the release
-build type) raise the bar but don't make it unrecoverable. That's fine for a
-`tasks:read`-only key with bounded consequences if it leaks, but:
-
-- Ask SoaringScoring whether they rate-limit per key and whether they'd
-  rather you flag a suspected leak for them to rotate, versus you engineering
-  around it.
-- If they'd rather you not risk it, the robust fix is a small server-side
-  proxy you control that holds the key and forwards requests — the app would
-  then never contain the secret at all. Not needed unless they ask for it.
-- Never commit `local.properties` — it's in `.gitignore` already, but double
-  check before making the repo public.
-
 ## Building
 
-Open the project root in Android Studio (Koala or newer). It doesn't include
-the Gradle wrapper jar/scripts (binary files aren't practical to hand-write) —
-Android Studio will offer to generate them on first open, or run
-`gradle wrapper --gradle-version 8.7` yourself if you have Gradle installed.
-Then just Run on a device/emulator.
+Open the project root in Android Studio (Koala or newer). 
+Targets Gradle 8.7
 
 Minimum SDK 26, target/compile SDK 34. No special permissions beyond
 `INTERNET` — folder access goes through Storage Access Framework, not
@@ -98,9 +75,8 @@ the permission, and read/write through `DocumentFile` from then on.
 - **No offline cache** — every screen re-fetches. Fine for contest use, but
   a local cache of the last-loaded task would help on bad campsite wifi.
 - **No waypoint/airspace download** — xcomps also ships `.cup` waypoints and
-  airspace files; SoaringScoring's public API in the doc you gave me doesn't
-  expose airspace, and waypoints would come from the `seeyouCup` file if
-  wanted later.
+  airspace files; SoaringScoring's public API doesn't expose airspace, and
+  waypoints would come from the `seeyouCup` file if wanted later.
 - **Class filtering** — right now all classes' tasks show in one list; for a
   multi-class contest you'll likely want a class picker so you're not
   scrolling past tasks that aren't yours.
