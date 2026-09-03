@@ -21,9 +21,24 @@ object XcsoarFolderStore {
      */
     fun findXcsoarFolders(context: Context, mediaTreeUri: Uri): List<DocumentFile> {
         val root = DocumentFile.fromTreeUri(context, mediaTreeUri) ?: return emptyList()
-        return root.listFiles().filter { child ->
-            child.isDirectory && child.name?.contains("soar", ignoreCase = true) == true
+        if (!root.isDirectory) return emptyList()
+
+        val matches = LinkedHashMap<Uri, DocumentFile>()
+
+        // The user may have picked the XCSoar-variant folder itself (e.g.
+        // org.xcsoar) rather than its parent Android/media folder — count
+        // that as a match too, instead of only ever looking one level down.
+        if (root.name?.contains("soar", ignoreCase = true) == true) {
+            matches[root.uri] = root
         }
+
+        root.listFiles().forEach { child ->
+            if (child.isDirectory && child.name?.contains("soar", ignoreCase = true) == true) {
+                matches[child.uri] = child
+            }
+        }
+
+        return matches.values.toList()
     }
 
     /**

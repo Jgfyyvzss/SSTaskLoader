@@ -58,21 +58,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 mediaTreeUri = treeUriString?.let(Uri::parse)
             )
             treeUriString?.let { refreshTargetFolders(Uri.parse(it)) }
+            loadContests()
         }
-        loadContests()
     }
 
     fun loadContests() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(contestsLoading = true, contestsError = null)
-            when (val result = api.getContests()) {
+            val key = _uiState.value.apiKey.ifBlank { null }
+            when (val result = api.getContests(key)) {
                 is ApiResult.Success -> _uiState.value = _uiState.value.copy(
                     contests = result.data.sortedByDescending { it.startDate },
                     contestsLoading = false
                 )
                 is ApiResult.Failure -> _uiState.value = _uiState.value.copy(
                     contestsLoading = false,
-                    contestsError = result.message
+                    contestsError = describeError(result)
                 )
             }
         }
@@ -128,6 +129,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val effectiveKey = key.ifBlank { BuildConfig.SS_API_KEY }
         _uiState.value = _uiState.value.copy(apiKey = effectiveKey, personalKeyOverride = key)
         viewModelScope.launch { settings.setApiKey(key) }
+        loadContests()
     }
 
     // --- Folder selection (SAF) ---

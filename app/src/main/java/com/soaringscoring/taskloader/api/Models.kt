@@ -46,7 +46,7 @@ data class TaskRow(
     val displayLabel: String,
     val isOfficialTask: Boolean,
     val files: TaskFiles,
-    val dhtHandicap: Int? = null,
+    val dhtHandicap: Double? = null,
     val dhtDistanceKm: Double? = null
 )
 

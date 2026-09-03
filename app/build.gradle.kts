@@ -1,9 +1,9 @@
 import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 val localProperties = Properties().apply {
@@ -49,6 +49,17 @@ android {
         compose = true
         buildConfig = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
+
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = "SSTaskLoader-${variant.versionName}-${variant.name}.apk"
+        }
+    }
 }
 
 dependencies {
@@ -66,6 +77,7 @@ dependencies {
 
     // Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     // Document/SAF helper for writing into Android/media/<xcsoar>/Tasks
