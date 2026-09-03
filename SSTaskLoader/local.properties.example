@@ -1,3 +1,0 @@
-# Copy this file to local.properties (which is gitignored) and fill in the real key.
-# Android Studio also writes sdk.dir into local.properties automatically - leave that line alone if present.
-ss.apiKey=ssk_live_paste_your_key_here
