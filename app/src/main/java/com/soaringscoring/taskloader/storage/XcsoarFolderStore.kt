@@ -13,6 +13,12 @@ import androidx.documentfile.provider.DocumentFile
  */
 object XcsoarFolderStore {
 
+    // Cache of (parent folder uri, filename) -> resolved file uri. Once we've found or
+    // created the target file, every later write reuses this directly instead of
+    // re-searching via findFile() each time - that search has been observed to
+    // occasionally miss an existing document on some devices/providers.
+    private val fileUriCache = mutableMapOf<Pair<Uri, String>, Uri>()
+
     /**
      * Looks at the direct children of the granted `Android/media` tree and
      * returns the ones that look like an XCSoar variant (name contains
@@ -42,9 +48,12 @@ object XcsoarFolderStore {
     }
 
     /**
-     * Writes [bytes] into `<xcsoarFolder>/Tasks/[filename]`, creating the
-     * Tasks subfolder and/or the file if needed, overwriting if it already
-     * exists. Returns true on success.
+     * Writes [bytes] into the correct tasks folder for [xcsoarFolder]. Different
+     * XCSoar installs use different casing for this subfolder ("Tasks" vs "tasks") -
+     * this looks for whichever one actually exists on THIS install and writes there.
+     * It never creates that subfolder itself (XCSoar always creates it on first run);
+     * if neither case exists, it falls back to writing directly into the XCSoar
+     * folder's root, which XCSoar/XCSoar Jet also pick up correctly.
      */
     fun writeTaskFile(
         context: Context,
@@ -52,13 +61,7 @@ object XcsoarFolderStore {
         filename: String,
         bytes: ByteArray
     ): Boolean {
-        val tasksDir = xcsoarFolder.findFile("Tasks")?.takeIf { it.isDirectory }
-            ?: xcsoarFolder.createDirectory("Tasks")
-            ?: return false
-
-        val existing = tasksDir.findFile(filename)
-        val target = existing ?: tasksDir.createFile("application/octet-stream", filename)
-        ?: return false
+        val target = resolveTargetFile(context, xcsoarFolder, filename) ?: return false
 
         return try {
             context.contentResolver.openOutputStream(target.uri, "wt")?.use { out ->
@@ -68,5 +71,34 @@ object XcsoarFolderStore {
         } catch (e: Exception) {
             false
         }
+    }
+
+    private fun resolveTargetFile(
+        context: Context,
+        xcsoarFolder: DocumentFile,
+        filename: String
+    ): DocumentFile? {
+        val cacheKey = xcsoarFolder.uri to filename
+
+        // Fast path: already resolved this earlier in this app run - reuse the exact
+        // same document reference rather than searching (and risking a miss) again.
+        fileUriCache[cacheKey]?.let { cachedUri ->
+            val cached = DocumentFile.fromSingleUri(context, cachedUri)
+            if (cached != null && cached.isFile && cached.exists()) {
+                return cached
+            }
+        }
+
+        // Find THIS install's tasks subfolder, whatever case it happens to use.
+        // Never create it - it's always created by XCSoar itself. If it's genuinely
+        // not there on either casing, write into the XCSoar folder's root instead.
+        val writeDir = xcsoarFolder.listFiles()
+            .firstOrNull { it.isDirectory && it.name.equals("tasks", ignoreCase = true) }
+            ?: xcsoarFolder
+
+        val existing = writeDir.findFile(filename)
+        val resolved = existing ?: writeDir.createFile("application/octet-stream", filename)
+        resolved?.let { fileUriCache[cacheKey] = it.uri }
+        return resolved
     }
 }
