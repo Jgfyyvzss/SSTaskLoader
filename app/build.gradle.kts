@@ -24,6 +24,12 @@ android {
         applicationId = "com.soaringscoring.taskloader"
         minSdk = 26
         targetSdk = 34
+        // Bump BOTH on every release you publish anywhere (GitHub, F-Droid, etc).
+        // versionCode: internal, integer only, Android/F-Droid use it to detect
+        //   "is this newer than what's installed" - just +1 every release, never reuse a number.
+        // versionName: what humans see. Semantic-ish is fine: MAJOR.MINOR.PATCH -
+        //   bump PATCH for a bugfix-only release, MINOR for new features, MAJOR for
+        //   a big breaking change. Also feeds the friendly APK filename below.
         versionCode = 1
         versionName = "0.1.0"
 
