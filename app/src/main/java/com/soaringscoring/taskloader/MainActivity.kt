@@ -60,7 +60,12 @@ private fun AppNavHost(viewModel: AppViewModel) {
                     navController.navigate("tasks")
                 },
                 onSettingsClick = { navController.navigate("settings") },
-                onRetry = { viewModel.loadContests() }
+                onRetry = { viewModel.loadContests() },
+                onChooseMediaFolder = {
+                    // Point the system picker at Android/media as a starting hint.
+                    mediaTreePicker.launch(null)
+                },
+                onToggleFolder = { viewModel.toggleFolderSelected(it.doc) }
             )
         }
         composable("tasks") {
@@ -73,11 +78,6 @@ private fun AppNavHost(viewModel: AppViewModel) {
                         viewModel.clearSelectedContest()
                         navController.popBackStack()
                     },
-                    onChooseMediaFolder = {
-                        // Point the system picker at Android/media as a starting hint.
-                        mediaTreePicker.launch(null)
-                    },
-                    onToggleFolder = { viewModel.toggleFolderSelected(it.doc) },
                     onDownload = { viewModel.downloadTask(it) },
                     onDismissStatus = { viewModel.clearStatusMessage() }
                 )

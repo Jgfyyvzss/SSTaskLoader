@@ -7,6 +7,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -25,17 +26,27 @@ class SoaringScoringApi(
         // The task-list endpoint is explicitly documented as slow on large
         // contests (walks every day/class/handicap), so give it more room.
         .readTimeout(45, TimeUnit.SECONDS)
+        .apply {
+            if (com.soaringscoring.taskloader.BuildConfig.DEBUG) {
+                // Debug builds only — prints request/response headers (including
+                // the Authorization header) to Logcat under the "OkHttp" tag, so
+                // we can see exactly what's being sent while troubleshooting.
+                addInterceptor(HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.HEADERS
+                })
+            }
+        }
         .build()
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun getContests(): ApiResult<List<Contest>> =
-        get("$baseUrl/contests") { body ->
+    suspend fun getContests(apiKey: String? = null): ApiResult<List<Contest>> =
+        get("$baseUrl/contests", apiKey) { body ->
             json.decodeFromString(ContestsResponse.serializer(), body).contests
         }
 
-    suspend fun getClasses(contestId: String): ApiResult<List<ContestClass>> =
-        get("$baseUrl/contests/$contestId/classes") { body ->
+    suspend fun getClasses(contestId: String, apiKey: String? = null): ApiResult<List<ContestClass>> =
+        get("$baseUrl/contests/$contestId/classes", apiKey) { body ->
             json.decodeFromString(ClassesResponse.serializer(), body).classes
         }
 

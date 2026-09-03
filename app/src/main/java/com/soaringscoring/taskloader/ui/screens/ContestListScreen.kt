@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.soaringscoring.taskloader.api.Contest
 import com.soaringscoring.taskloader.ui.AppUiState
+import com.soaringscoring.taskloader.ui.TargetFolder
+import com.soaringscoring.taskloader.util.dateOnly
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,7 +22,9 @@ fun ContestListScreen(
     state: AppUiState,
     onContestClick: (Contest) -> Unit,
     onSettingsClick: () -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onChooseMediaFolder: () -> Unit,
+    onToggleFolder: (TargetFolder) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -34,24 +38,28 @@ fun ContestListScreen(
             )
         }
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
-            when {
-                state.contestsLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                state.contestsError != null -> ErrorWithRetry(state.contestsError, onRetry)
-                state.contests.isEmpty() -> Text(
-                    "No contests found.",
-                    Modifier.align(Alignment.Center)
-                )
-                else -> LazyColumn {
-                    items(state.contests) { contest ->
-                        ListItem(
-                            headlineContent = { Text(contest.name) },
-                            supportingContent = {
-                                Text("${contest.startDate} – ${contest.endDate}")
-                            },
-                            modifier = Modifier.clickable { onContestClick(contest) }
-                        )
-                        HorizontalDivider()
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            FolderPicker(state, onChooseMediaFolder, onToggleFolder)
+            HorizontalDivider()
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    state.contestsLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    state.contestsError != null -> ErrorWithRetry(state.contestsError, onRetry)
+                    state.contests.isEmpty() -> Text(
+                        "No contests found.",
+                        Modifier.align(Alignment.Center)
+                    )
+                    else -> LazyColumn {
+                        items(state.contests) { contest ->
+                            ListItem(
+                                headlineContent = { Text(contest.name) },
+                                supportingContent = {
+                                    Text("${dateOnly(contest.startDate)} – ${dateOnly(contest.endDate)}")
+                                },
+                                modifier = Modifier.clickable { onContestClick(contest) }
+                            )
+                            HorizontalDivider()
+                        }
                     }
                 }
             }
