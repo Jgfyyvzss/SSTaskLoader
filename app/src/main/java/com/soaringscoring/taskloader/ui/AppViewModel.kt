@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.soaringscoring.taskloader.BuildConfig
 import com.soaringscoring.taskloader.api.ApiResult
 import com.soaringscoring.taskloader.api.Contest
+import com.soaringscoring.taskloader.api.ContestClass
 import com.soaringscoring.taskloader.api.SoaringScoringApi
 import com.soaringscoring.taskloader.api.TaskRow
 import com.soaringscoring.taskloader.data.SettingsRepository
@@ -29,11 +30,17 @@ data class AppUiState(
     val contests: List<Contest> = emptyList(),
     val contestsLoading: Boolean = false,
     val contestsError: String? = null,
+    val selectedTimeFrame: ContestTimeFrame = ContestTimeFrame.CURRENT,
 
     val selectedContest: Contest? = null,
     val tasks: List<TaskRow> = emptyList(),
     val tasksLoading: Boolean = false,
     val tasksError: String? = null,
+
+    val classes: List<ContestClass> = emptyList(),
+    val classesLoading: Boolean = false,
+    val classesError: String? = null,
+    val selectedClass: ContestClass? = null,
 
     val downloadingTaskId: String? = null,
     val statusMessage: String? = null
@@ -83,14 +90,56 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(
             selectedContest = contest,
             tasks = emptyList(),
-            tasksError = null
+            tasksError = null,
+            classes = emptyList(),
+            classesError = null,
+            selectedClass = null
         )
         viewModelScope.launch { settings.setLastContest(contest.id, contest.name) }
         loadTasks(contest)
+        loadClasses(contest)
     }
 
     fun clearSelectedContest() {
-        _uiState.value = _uiState.value.copy(selectedContest = null, tasks = emptyList(), tasksError = null)
+        _uiState.value = _uiState.value.copy(
+            selectedContest = null,
+            tasks = emptyList(),
+            tasksError = null,
+            classes = emptyList(),
+            classesError = null,
+            selectedClass = null
+        )
+    }
+
+    fun selectTimeFrame(timeFrame: ContestTimeFrame) {
+        _uiState.value = _uiState.value.copy(selectedTimeFrame = timeFrame)
+    }
+
+    fun loadClasses(contest: Contest) {
+        val key = _uiState.value.apiKey.ifBlank { null }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(classesLoading = true, classesError = null)
+            when (val result = api.getClasses(contest.id, key)) {
+                is ApiResult.Success -> {
+                    val classes = result.data
+                    _uiState.value = _uiState.value.copy(
+                        classes = classes,
+                        classesLoading = false,
+                        // Auto-select when there's only one class - saves a tap for
+                        // single-class contests, matching common practice.
+                        selectedClass = classes.singleOrNull()
+                    )
+                }
+                is ApiResult.Failure -> _uiState.value = _uiState.value.copy(
+                    classesLoading = false,
+                    classesError = describeError(result)
+                )
+            }
+        }
+    }
+
+    fun selectClass(contestClass: ContestClass) {
+        _uiState.value = _uiState.value.copy(selectedClass = contestClass)
     }
 
     fun loadTasks(contest: Contest) {

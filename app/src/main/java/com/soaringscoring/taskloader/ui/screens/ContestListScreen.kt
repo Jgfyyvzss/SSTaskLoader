@@ -10,9 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.soaringscoring.taskloader.api.Contest
 import com.soaringscoring.taskloader.ui.AppUiState
+import com.soaringscoring.taskloader.ui.ContestGrouping
+import com.soaringscoring.taskloader.ui.ContestTimeFrame
 import com.soaringscoring.taskloader.ui.TargetFolder
 import com.soaringscoring.taskloader.util.dateOnly
 
@@ -24,7 +28,8 @@ fun ContestListScreen(
     onSettingsClick: () -> Unit,
     onRetry: () -> Unit,
     onChooseMediaFolder: () -> Unit,
-    onToggleFolder: (TargetFolder) -> Unit
+    onToggleFolder: (TargetFolder) -> Unit,
+    onSelectTimeFrame: (ContestTimeFrame) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -41,24 +46,50 @@ fun ContestListScreen(
         Column(Modifier.padding(padding).fillMaxSize()) {
             FolderPicker(state, onChooseMediaFolder, onToggleFolder)
             HorizontalDivider()
+
+            TabRow(selectedTabIndex = state.selectedTimeFrame.ordinal) {
+                ContestTimeFrame.entries.forEach { timeFrame ->
+                    Tab(
+                        selected = state.selectedTimeFrame == timeFrame,
+                        onClick = { onSelectTimeFrame(timeFrame) },
+                        text = { Text(timeFrame.label) }
+                    )
+                }
+            }
+
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when {
                     state.contestsLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                     state.contestsError != null -> ErrorWithRetry(state.contestsError, onRetry)
-                    state.contests.isEmpty() -> Text(
-                        "No contests found.",
-                        Modifier.align(Alignment.Center)
-                    )
-                    else -> LazyColumn {
-                        items(state.contests) { contest ->
-                            ListItem(
-                                headlineContent = { Text(contest.name) },
-                                supportingContent = {
-                                    Text("${dateOnly(contest.startDate)} – ${dateOnly(contest.endDate)}")
-                                },
-                                modifier = Modifier.clickable { onContestClick(contest) }
+                    else -> {
+                        val groups = ContestGrouping.groupedFor(state.contests, state.selectedTimeFrame)
+                        if (groups.isEmpty()) {
+                            Text(
+                                emptyMessageFor(state.selectedTimeFrame),
+                                Modifier.align(Alignment.Center).padding(24.dp),
+                                textAlign = TextAlign.Center
                             )
-                            HorizontalDivider()
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                groups.forEach { group ->
+                                    if (group.label.isNotEmpty()) {
+                                        item {
+                                            Text(
+                                                group.label,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    items(group.contests) { contest ->
+                                        ContestCard(contest = contest, onClick = { onContestClick(contest) })
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -68,13 +99,41 @@ fun ContestListScreen(
 }
 
 @Composable
+private fun ContestCard(contest: Contest, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(contest.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            contest.organisationName?.let {
+                Spacer(Modifier.height(2.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "${dateOnly(contest.startDate)} – ${dateOnly(contest.endDate)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun emptyMessageFor(timeFrame: ContestTimeFrame): String = when (timeFrame) {
+    ContestTimeFrame.CURRENT -> "No contests currently underway."
+    ContestTimeFrame.FUTURE -> "No upcoming contests found."
+    ContestTimeFrame.PAST -> "No past contests found."
+}
+
+@Composable
 private fun ErrorWithRetry(message: String, onRetry: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(message, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(message, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Button(onClick = onRetry) { Text("Retry") }
     }

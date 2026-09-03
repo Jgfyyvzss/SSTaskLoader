@@ -65,7 +65,8 @@ private fun AppNavHost(viewModel: AppViewModel) {
                     // Point the system picker at Android/media as a starting hint.
                     mediaTreePicker.launch(null)
                 },
-                onToggleFolder = { viewModel.toggleFolderSelected(it.doc) }
+                onToggleFolder = { viewModel.toggleFolderSelected(it.doc) },
+                onSelectTimeFrame = { viewModel.selectTimeFrame(it) }
             )
         }
         composable("tasks") {
@@ -78,6 +79,7 @@ private fun AppNavHost(viewModel: AppViewModel) {
                         viewModel.clearSelectedContest()
                         navController.popBackStack()
                     },
+                    onSelectClass = { viewModel.selectClass(it) },
                     onDownload = { viewModel.downloadTask(it) },
                     onDismissStatus = { viewModel.clearStatusMessage() }
                 )
