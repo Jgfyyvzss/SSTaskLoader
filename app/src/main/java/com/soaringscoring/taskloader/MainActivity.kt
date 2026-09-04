@@ -21,6 +21,7 @@ import com.soaringscoring.taskloader.ui.AppViewModel
 import com.soaringscoring.taskloader.ui.screens.ContestListScreen
 import com.soaringscoring.taskloader.ui.screens.SettingsScreen
 import com.soaringscoring.taskloader.ui.screens.TaskListScreen
+import com.soaringscoring.taskloader.ui.screens.UploadScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -60,6 +61,7 @@ private fun AppNavHost(viewModel: AppViewModel) {
                     navController.navigate("tasks")
                 },
                 onSettingsClick = { navController.navigate("settings") },
+                onUploadClick = { navController.navigate("upload") },
                 onRetry = { viewModel.loadContests() },
                 onToggleFolder = { viewModel.toggleFolderSelected(it.doc) },
                 onSelectTimeFrame = { viewModel.selectTimeFrame(it) }
@@ -93,7 +95,22 @@ private fun AppNavHost(viewModel: AppViewModel) {
                 onChooseMediaFolder = {
                     // Point the system picker at Android/media as a starting hint.
                     mediaTreePicker.launch(null)
+                },
+                onSaveUploadSettings = { key, address ->
+                    viewModel.saveUploadSettings(key, address)
+                    navController.popBackStack()
                 }
+            )
+        }
+        composable("upload") {
+            UploadScreen(
+                state = state,
+                onBack = { navController.popBackStack() },
+                onRefresh = { viewModel.refreshIgcFiles() },
+                onSelectFile = { viewModel.selectFileForUpload(it) },
+                onCancelPending = { viewModel.cancelPendingUpload() },
+                onConfirmUpload = { viewModel.confirmUpload() },
+                onDismissOutcome = { viewModel.dismissUploadOutcome() }
             )
         }
     }

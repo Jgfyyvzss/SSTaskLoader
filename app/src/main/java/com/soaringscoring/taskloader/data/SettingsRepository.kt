@@ -16,12 +16,16 @@ class SettingsRepository(private val context: Context) {
         val LAST_CONTEST_ID = stringPreferencesKey("last_contest_id")
         val LAST_CONTEST_NAME = stringPreferencesKey("last_contest_name")
         val MEDIA_TREE_URI = stringPreferencesKey("media_tree_uri")
+        val UPLOAD_API_KEY = stringPreferencesKey("upload_api_key")
+        val ENTRY_ADDRESS = stringPreferencesKey("entry_address")
     }
 
     val apiKey: Flow<String> = context.dataStore.data.map { it[Keys.API_KEY].orEmpty() }
     val lastContestId: Flow<String?> = context.dataStore.data.map { it[Keys.LAST_CONTEST_ID] }
     val lastContestName: Flow<String?> = context.dataStore.data.map { it[Keys.LAST_CONTEST_NAME] }
     val mediaTreeUri: Flow<String?> = context.dataStore.data.map { it[Keys.MEDIA_TREE_URI] }
+    val uploadApiKey: Flow<String> = context.dataStore.data.map { it[Keys.UPLOAD_API_KEY].orEmpty() }
+    val entryAddress: Flow<String> = context.dataStore.data.map { it[Keys.ENTRY_ADDRESS].orEmpty() }
 
     suspend fun setApiKey(value: String) {
         context.dataStore.edit { it[Keys.API_KEY] = value }
@@ -36,5 +40,12 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setMediaTreeUri(uri: String) {
         context.dataStore.edit { it[Keys.MEDIA_TREE_URI] = uri }
+    }
+
+    suspend fun setUploadSettings(uploadApiKey: String, entryAddress: String) {
+        context.dataStore.edit {
+            it[Keys.UPLOAD_API_KEY] = uploadApiKey
+            it[Keys.ENTRY_ADDRESS] = entryAddress
+        }
     }
 }

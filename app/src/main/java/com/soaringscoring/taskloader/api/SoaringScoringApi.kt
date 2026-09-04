@@ -7,6 +7,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -82,6 +84,42 @@ class SoaringScoringApi(
             } catch (e: IOException) {
                 ApiResult.Failure("Network error: ${e.message}")
             }
+        }
+    }
+
+    /**
+     * Uploads an IGC flight log. [localPart] is the pilot's own
+     * {competitionNumber}-{contestKey} entry address; [apiKey] is the pilot's own
+     * personal key with the `flights:write` scope - both distinct from the app's
+     * built-in `tasks:read` key used everywhere else in this client.
+     */
+    suspend fun uploadFlight(
+        localPart: String,
+        apiKey: String,
+        igcBytes: ByteArray,
+        filename: String
+    ): ApiResult<UploadResult> = withContext(Dispatchers.IO) {
+        try {
+            val body = igcBytes.toRequestBody("application/octet-stream".toMediaType())
+            val request = Request.Builder()
+                .url("$baseUrl/entries/$localPart/igc")
+                .header("Authorization", "Bearer $apiKey")
+                .header("X-Igc-Filename", filename)
+                .post(body)
+                .build()
+            client.newCall(request).execute().use { resp ->
+                val bodyString = resp.body?.string().orEmpty()
+                if (!resp.isSuccessful) {
+                    return@use failureFrom(resp.code, bodyString)
+                }
+                try {
+                    ApiResult.Success(json.decodeFromString(UploadResponse.serializer(), bodyString).upload)
+                } catch (e: Exception) {
+                    ApiResult.Failure("Could not parse response: ${e.message}", resp.code)
+                }
+            }
+        } catch (e: IOException) {
+            ApiResult.Failure("Network error: ${e.message}")
         }
     }
 

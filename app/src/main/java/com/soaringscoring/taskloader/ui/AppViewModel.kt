@@ -11,15 +11,24 @@ import com.soaringscoring.taskloader.api.Contest
 import com.soaringscoring.taskloader.api.ContestClass
 import com.soaringscoring.taskloader.api.SoaringScoringApi
 import com.soaringscoring.taskloader.api.TaskRow
+import com.soaringscoring.taskloader.api.UploadResult
 import com.soaringscoring.taskloader.data.SettingsRepository
+import com.soaringscoring.taskloader.storage.IgcFile
 import com.soaringscoring.taskloader.storage.XcsoarFolderStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class TargetFolder(val doc: DocumentFile, val selected: Boolean)
+
+sealed class UploadOutcome {
+    data class Success(val result: UploadResult) : UploadOutcome()
+    data class Failure(val message: String) : UploadOutcome()
+}
 
 data class AppUiState(
     val apiKey: String = "",
@@ -44,7 +53,16 @@ data class AppUiState(
 
     val downloadingTaskId: String? = null,
     val downloadingWaypoints: Boolean = false,
-    val statusMessage: String? = null
+    val statusMessage: String? = null,
+
+    // --- Flight upload ---
+    val uploadApiKey: String = "",
+    val entryAddress: String = "",
+    val igcFiles: List<IgcFile> = emptyList(),
+    val igcFilesLoading: Boolean = false,
+    val pendingUploadFile: IgcFile? = null,
+    val isUploading: Boolean = false,
+    val uploadOutcome: UploadOutcome? = null
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -60,10 +78,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val savedKey = settings.apiKey.first()
             val effectiveKey = savedKey.ifBlank { BuildConfig.SS_API_KEY }
             val treeUriString = settings.mediaTreeUri.first()
+            val uploadKey = settings.uploadApiKey.first()
+            val address = settings.entryAddress.first()
             _uiState.value = _uiState.value.copy(
                 apiKey = effectiveKey,
                 personalKeyOverride = savedKey,
-                mediaTreeUri = treeUriString?.let(Uri::parse)
+                mediaTreeUri = treeUriString?.let(Uri::parse),
+                uploadApiKey = uploadKey,
+                entryAddress = address
             )
             treeUriString?.let { refreshTargetFolders(Uri.parse(it)) }
             loadContests()
@@ -314,5 +336,98 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearStatusMessage() {
         _uiState.value = _uiState.value.copy(statusMessage = null)
+    }
+
+    // --- Flight upload ---
+
+    fun saveUploadSettings(uploadApiKey: String, entryAddress: String) {
+        _uiState.value = _uiState.value.copy(uploadApiKey = uploadApiKey, entryAddress = entryAddress)
+        viewModelScope.launch { settings.setUploadSettings(uploadApiKey, entryAddress) }
+    }
+
+    /** Scans every selected XCSoar folder's logs (recent versions) for .igc files. */
+    fun refreshIgcFiles() {
+        val selectedFolders = _uiState.value.targetFolders.filter { it.selected }
+        if (selectedFolders.isEmpty()) {
+            _uiState.value = _uiState.value.copy(igcFiles = emptyList())
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(igcFilesLoading = true)
+            val found = withContext(Dispatchers.IO) {
+                selectedFolders.flatMap { XcsoarFolderStore.findIgcFiles(getApplication(), it.doc) }
+            }
+            _uiState.value = _uiState.value.copy(
+                igcFiles = found.sortedByDescending { it.doc.lastModified() },
+                igcFilesLoading = false
+            )
+        }
+    }
+
+    fun selectFileForUpload(file: IgcFile) {
+        _uiState.value = _uiState.value.copy(pendingUploadFile = file)
+    }
+
+    fun cancelPendingUpload() {
+        _uiState.value = _uiState.value.copy(pendingUploadFile = null)
+    }
+
+    fun confirmUpload() {
+        val state = _uiState.value
+        val file = state.pendingUploadFile ?: return
+        val key = state.uploadApiKey
+        val address = state.entryAddress
+
+        if (key.isBlank() || address.isBlank()) {
+            _uiState.value = state.copy(
+                pendingUploadFile = null,
+                uploadOutcome = UploadOutcome.Failure("Set your upload API key and entry address in Settings first.")
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(pendingUploadFile = null, isUploading = true)
+            val bytes = try {
+                withContext(Dispatchers.IO) {
+                    getApplication<Application>().contentResolver.openInputStream(file.doc.uri)?.use { it.readBytes() }
+                }
+            } catch (e: Exception) {
+                null
+            }
+
+            if (bytes == null) {
+                _uiState.value = _uiState.value.copy(
+                    isUploading = false,
+                    uploadOutcome = UploadOutcome.Failure("Could not read that file.")
+                )
+                return@launch
+            }
+
+            when (val result = api.uploadFlight(address, key, bytes, file.doc.name ?: "flight.igc")) {
+                is ApiResult.Success -> _uiState.value = _uiState.value.copy(
+                    isUploading = false,
+                    uploadOutcome = UploadOutcome.Success(result.data)
+                )
+                is ApiResult.Failure -> _uiState.value = _uiState.value.copy(
+                    isUploading = false,
+                    uploadOutcome = UploadOutcome.Failure(describeUploadError(result))
+                )
+            }
+        }
+    }
+
+    private fun describeUploadError(failure: ApiResult.Failure): String = when (failure.code) {
+        "MISSING_API_KEY" -> "No upload API key set. Add one in Settings."
+        "INVALID_API_KEY" -> "That upload API key is invalid or has been revoked."
+        "INSUFFICIENT_SCOPE" -> "This key doesn't have the flights:write scope."
+        "INVALID_ADDRESS" -> "That entry address doesn't look right - check it against the pilot downloads page."
+        "ENTRY_NOT_FOUND" -> "No contest entry matches that address - check the competition number and contest key."
+        "NO_OFFICIAL_TASK" -> "No official task is set yet for your class today."
+        else -> failure.message
+    }
+
+    fun dismissUploadOutcome() {
+        _uiState.value = _uiState.value.copy(uploadOutcome = null)
     }
 }

@@ -76,6 +76,22 @@ object XcsoarFolderStore {
         bytes: ByteArray
     ): Boolean = writeFile(context, xcsoarFolder, "waypoints", filename, bytes)
 
+    /**
+     * Lists .igc flight logs found in [xcsoarFolder]'s "logs" subfolder (recent
+     * XCSoar versions; case-insensitive same as tasks/waypoints), falling back to
+     * the folder's root if there's no such subfolder. Read-only - never creates
+     * anything. [xcsoarFolder]'s own name is attached to each result so the UI can
+     * show which app (XCSoar vs XCSoar Jet) a file came from if the same-named
+     * file happens to exist in both.
+     */
+    fun findIgcFiles(context: Context, xcsoarFolder: DocumentFile): List<IgcFile> {
+        val dir = resolveSubfolderOrRoot(xcsoarFolder, "logs")
+        val sourceName = xcsoarFolder.name ?: "XCSoar"
+        return dir.listFiles()
+            .filter { it.isFile && it.name?.endsWith(".igc", ignoreCase = true) == true }
+            .map { IgcFile(it, sourceName) }
+    }
+
     private fun writeFile(
         context: Context,
         xcsoarFolder: DocumentFile,
@@ -113,17 +129,23 @@ object XcsoarFolderStore {
             }
         }
 
-        // Find THIS install's subfolder, whatever case it happens to use. Never
-        // create it - it's always created by XCSoar itself. If it's genuinely not
-        // there on either casing (e.g. an older XCSoar with no waypoints folder),
-        // write into the XCSoar folder's root instead.
-        val writeDir = xcsoarFolder.listFiles()
-            .firstOrNull { it.isDirectory && it.name.equals(preferredSubfolderName, ignoreCase = true) }
-            ?: xcsoarFolder
-
+        val writeDir = resolveSubfolderOrRoot(xcsoarFolder, preferredSubfolderName)
         val existing = writeDir.findFile(filename)
         val resolved = existing ?: writeDir.createFile("application/octet-stream", filename)
         resolved?.let { fileUriCache[cacheKey] = it.uri }
         return resolved
     }
+
+    /**
+     * Finds THIS install's subfolder, whatever case it happens to use. Never
+     * creates it - it's always created by XCSoar itself. If it's genuinely not
+     * there on either casing (e.g. an older XCSoar with no waypoints folder, or
+     * one predating the logs subfolder), falls back to the XCSoar folder's root.
+     */
+    private fun resolveSubfolderOrRoot(xcsoarFolder: DocumentFile, preferredSubfolderName: String): DocumentFile =
+        xcsoarFolder.listFiles()
+            .firstOrNull { it.isDirectory && it.name.equals(preferredSubfolderName, ignoreCase = true) }
+            ?: xcsoarFolder
 }
+
+data class IgcFile(val doc: DocumentFile, val sourceFolderName: String)
