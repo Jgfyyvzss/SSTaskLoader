@@ -288,10 +288,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 is ApiResult.Success -> {
                     var okCount = 0
                     selectedFolders.forEach { folder ->
-                        val ok = XcsoarFolderStore.writeTaskFile(
+                        val ok = XcsoarFolderStore.writeWaypointFile(
                             getApplication(),
                             folder.doc,
-                            "soaringscoring_waypoints.cup",
+                            "soaringscoring_waypoint.cup",
                             result.data
                         )
                         if (ok) okCount++
