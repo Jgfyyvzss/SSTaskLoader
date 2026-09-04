@@ -60,8 +60,31 @@ object XcsoarFolderStore {
         xcsoarFolder: DocumentFile,
         filename: String,
         bytes: ByteArray
+    ): Boolean = writeFile(context, xcsoarFolder, "tasks", filename, bytes)
+
+    /**
+     * Writes [bytes] into the correct waypoints folder for [xcsoarFolder]. Recent
+     * XCSoar versions use a "waypoints" subfolder (same case-insensitive matching as
+     * tasks); older versions have no such folder at all, so this falls back to the
+     * XCSoar folder's root the same way writeTaskFile does. Never creates the
+     * subfolder itself.
+     */
+    fun writeWaypointFile(
+        context: Context,
+        xcsoarFolder: DocumentFile,
+        filename: String,
+        bytes: ByteArray
+    ): Boolean = writeFile(context, xcsoarFolder, "waypoints", filename, bytes)
+
+    private fun writeFile(
+        context: Context,
+        xcsoarFolder: DocumentFile,
+        preferredSubfolderName: String,
+        filename: String,
+        bytes: ByteArray
     ): Boolean {
-        val target = resolveTargetFile(context, xcsoarFolder, filename) ?: return false
+        val target = resolveTargetFile(context, xcsoarFolder, preferredSubfolderName, filename)
+            ?: return false
 
         return try {
             context.contentResolver.openOutputStream(target.uri, "wt")?.use { out ->
@@ -76,6 +99,7 @@ object XcsoarFolderStore {
     private fun resolveTargetFile(
         context: Context,
         xcsoarFolder: DocumentFile,
+        preferredSubfolderName: String,
         filename: String
     ): DocumentFile? {
         val cacheKey = xcsoarFolder.uri to filename
@@ -89,11 +113,12 @@ object XcsoarFolderStore {
             }
         }
 
-        // Find THIS install's tasks subfolder, whatever case it happens to use.
-        // Never create it - it's always created by XCSoar itself. If it's genuinely
-        // not there on either casing, write into the XCSoar folder's root instead.
+        // Find THIS install's subfolder, whatever case it happens to use. Never
+        // create it - it's always created by XCSoar itself. If it's genuinely not
+        // there on either casing (e.g. an older XCSoar with no waypoints folder),
+        // write into the XCSoar folder's root instead.
         val writeDir = xcsoarFolder.listFiles()
-            .firstOrNull { it.isDirectory && it.name.equals("tasks", ignoreCase = true) }
+            .firstOrNull { it.isDirectory && it.name.equals(preferredSubfolderName, ignoreCase = true) }
             ?: xcsoarFolder
 
         val existing = writeDir.findFile(filename)

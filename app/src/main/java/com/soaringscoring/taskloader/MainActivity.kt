@@ -77,6 +77,7 @@ private fun AppNavHost(viewModel: AppViewModel) {
                     },
                     onSelectClass = { viewModel.selectClass(it) },
                     onDownload = { viewModel.downloadTask(it) },
+                    onDownloadWaypoints = { viewModel.downloadWaypoints() },
                     onDismissStatus = { viewModel.clearStatusMessage() }
                 )
             }

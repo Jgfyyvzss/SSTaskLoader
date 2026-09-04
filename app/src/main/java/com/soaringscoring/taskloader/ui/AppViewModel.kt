@@ -43,6 +43,7 @@ data class AppUiState(
     val selectedClass: ContestClass? = null,
 
     val downloadingTaskId: String? = null,
+    val downloadingWaypoints: Boolean = false,
     val statusMessage: String? = null
 )
 
@@ -249,6 +250,62 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 is ApiResult.Failure -> _uiState.value = _uiState.value.copy(
                     downloadingTaskId = null,
+                    statusMessage = "Download failed: ${describeError(result)}"
+                )
+            }
+        }
+    }
+
+    /**
+     * Downloads the SeeYou .cup waypoint file, once per contest rather than once
+     * per task - the underlying turnpoint set is the same all week even though
+     * the API bundles it with a specific day's task in the file itself. Any task
+     * row's `files.seeyouCup` URL points at the same waypoint database, so we
+     * just need one - the earliest day, for a stable/predictable choice.
+     */
+    fun downloadWaypoints() {
+        val state = _uiState.value
+        val key = state.apiKey
+        val selectedFolders = state.targetFolders.filter { it.selected }
+        val sourceTask = state.tasks.minByOrNull { it.dayNumber }
+
+        if (key.isBlank()) {
+            _uiState.value = state.copy(statusMessage = "Add an API key in Settings first.")
+            return
+        }
+        if (selectedFolders.isEmpty()) {
+            _uiState.value = state.copy(statusMessage = "Choose at least one XCSoar folder first.")
+            return
+        }
+        if (sourceTask == null) {
+            _uiState.value = state.copy(statusMessage = "No tasks loaded yet for this contest.")
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(downloadingWaypoints = true, statusMessage = null)
+            when (val result = api.downloadTaskFile(sourceTask.files.seeyouCup, key)) {
+                is ApiResult.Success -> {
+                    var okCount = 0
+                    selectedFolders.forEach { folder ->
+                        val ok = XcsoarFolderStore.writeWaypointFile(
+                            getApplication(),
+                            folder.doc,
+                            "soaringscoring_waypoint.cup",
+                            result.data
+                        )
+                        if (ok) okCount++
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        downloadingWaypoints = false,
+                        statusMessage = if (okCount == selectedFolders.size)
+                            "Waypoints loaded into $okCount folder(s)."
+                        else
+                            "Loaded into $okCount of ${selectedFolders.size} folder(s) — check permissions."
+                    )
+                }
+                is ApiResult.Failure -> _uiState.value = _uiState.value.copy(
+                    downloadingWaypoints = false,
                     statusMessage = "Download failed: ${describeError(result)}"
                 )
             }
