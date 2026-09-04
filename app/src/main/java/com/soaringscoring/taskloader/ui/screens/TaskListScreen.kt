@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,6 +33,7 @@ fun TaskListScreen(
     onBack: () -> Unit,
     onSelectClass: (ContestClass) -> Unit,
     onDownload: (TaskRow) -> Unit,
+    onDownloadWaypoints: () -> Unit,
     onDismissStatus: () -> Unit
 ) {
     Scaffold(
@@ -41,6 +43,18 @@ fun TaskListScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (state.downloadingWaypoints) {
+                        CircularProgressIndicator(
+                            Modifier.padding(12.dp).size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        IconButton(onClick = onDownloadWaypoints) {
+                            Icon(Icons.Filled.Place, contentDescription = "Get waypoints for this contest")
+                        }
                     }
                 }
             )
