@@ -13,21 +13,19 @@ import com.soaringscoring.taskloader.ui.AppUiState
 import com.soaringscoring.taskloader.ui.TargetFolder
 
 /**
- * Lets the user grant access to Android/media once, then tick which
- * XCSoar-variant folders (XCSoar, XCSoar Jet, ...) new tasks get written to.
- * Selection lives in AppViewModel so it's shared across every screen.
+ * One-time permission grant for the Android/media folder. Belongs in Settings -
+ * you set this up once and never need to touch it again afterwards.
  */
 @Composable
-fun FolderPicker(
+fun MediaFolderAccessSetting(
     state: AppUiState,
-    onChooseMediaFolder: () -> Unit,
-    onToggleFolder: (TargetFolder) -> Unit
+    onChooseMediaFolder: () -> Unit
 ) {
     Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Folder, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("XCSoar folders", style = MaterialTheme.typography.titleMedium)
+            Text("Android/media access", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.weight(1f))
             TextButton(onClick = onChooseMediaFolder) {
                 Text(if (state.mediaTreeUri == null) "Choose Android/media" else "Change")
@@ -36,18 +34,47 @@ fun FolderPicker(
         if (state.mediaTreeUri == null) {
             Text(
                 "Grant access to the Android/media folder once — that's where XCSoar and " +
-                    "XCSoar Jet each keep their own Tasks folder. If you only have one variant " +
-                    "installed, picking that app's folder directly also works.",
-                style = MaterialTheme.typography.bodySmall
-            )
-        } else if (state.targetFolders.isEmpty()) {
-            Text(
-                "No XCSoar-like folders found there. Make sure you picked Android/media " +
-                    "(or an XCSoar app's own folder) — not some other folder.",
+                    "XCSoar Jet each keep their own Tasks folder. If you only have one " +
+                    "variant installed, picking that app's folder directly also works.",
                 style = MaterialTheme.typography.bodySmall
             )
         } else {
-            state.targetFolders.forEach { folder ->
+            val names = state.targetFolders.mapNotNull { it.doc.name }
+            Text(
+                if (names.isEmpty()) "Access granted, but no XCSoar-like folders were found there."
+                else "Access granted. Found: ${names.joinToString(", ")}",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+/**
+ * Per-download choice of which detected XCSoar folder(s) to save into. Belongs on
+ * the contest list (home) screen - this is something you might change from one
+ * download to the next, e.g. switching between XCSoar and XCSoar Jet.
+ */
+@Composable
+fun TargetFolderCheckboxes(
+    state: AppUiState,
+    onToggleFolder: (TargetFolder) -> Unit
+) {
+    Column(Modifier.padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Folder, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Save to", style = MaterialTheme.typography.titleMedium)
+        }
+        when {
+            state.mediaTreeUri == null -> Text(
+                "Grant folder access in Settings to choose which app(s) to save to.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            state.targetFolders.isEmpty() -> Text(
+                "No XCSoar-like folders found. Check folder access in Settings.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            else -> state.targetFolders.forEach { folder ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable { onToggleFolder(folder) }

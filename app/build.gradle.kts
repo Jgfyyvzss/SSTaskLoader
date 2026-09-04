@@ -31,7 +31,7 @@ android {
         //   bump PATCH for a bugfix-only release, MINOR for new features, MAJOR for
         //   a big breaking change. Also feeds the friendly APK filename below.
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.2.0"
 
         buildConfigField("String", "SS_API_KEY", "\"$ssApiKey\"")
     }

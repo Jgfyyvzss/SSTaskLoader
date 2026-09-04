@@ -61,10 +61,6 @@ private fun AppNavHost(viewModel: AppViewModel) {
                 },
                 onSettingsClick = { navController.navigate("settings") },
                 onRetry = { viewModel.loadContests() },
-                onChooseMediaFolder = {
-                    // Point the system picker at Android/media as a starting hint.
-                    mediaTreePicker.launch(null)
-                },
                 onToggleFolder = { viewModel.toggleFolderSelected(it.doc) },
                 onSelectTimeFrame = { viewModel.selectTimeFrame(it) }
             )
@@ -87,11 +83,15 @@ private fun AppNavHost(viewModel: AppViewModel) {
         }
         composable("settings") {
             SettingsScreen(
-                currentApiKey = state.personalKeyOverride,
+                state = state,
                 onBack = { navController.popBackStack() },
                 onSave = {
                     viewModel.saveApiKey(it)
                     navController.popBackStack()
+                },
+                onChooseMediaFolder = {
+                    // Point the system picker at Android/media as a starting hint.
+                    mediaTreePicker.launch(null)
                 }
             )
         }

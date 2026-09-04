@@ -27,7 +27,6 @@ fun ContestListScreen(
     onContestClick: (Contest) -> Unit,
     onSettingsClick: () -> Unit,
     onRetry: () -> Unit,
-    onChooseMediaFolder: () -> Unit,
     onToggleFolder: (TargetFolder) -> Unit,
     onSelectTimeFrame: (ContestTimeFrame) -> Unit
 ) {
@@ -44,7 +43,7 @@ fun ContestListScreen(
         }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            FolderPicker(state, onChooseMediaFolder, onToggleFolder)
+            TargetFolderCheckboxes(state, onToggleFolder)
             HorizontalDivider()
 
             TabRow(selectedTabIndex = state.selectedTimeFrame.ordinal) {
