@@ -19,9 +19,19 @@ instead of SoaringSpot/GlideAndSeek.
    (`org.xcsoar`, `com.zinuzoid.xcsoar_jet`, future forks, etc.) and lets you
    tick which ones to write to.
 4. Tapping the download icon on a task fetches the XCSoar `.tsk` file
-   (`files.xcsoarTsk` from the tasks response) and writes it to
-   `<that folder>/Tasks/soaringscoring_task.tsk`, overwriting each time —
-   same filename-per-overwrite pattern as xcomps.
+   (`files.xcsoarTsk` from the tasks response) and writes it to each ticked
+   folder's `Tasks/` subfolder under two names: `soaringscoring_task.tsk`
+   (load this by hand as the current task on day one) and `default.tsk`
+   (the name XCSoar auto-loads on startup, so every day after that just
+   needs the download — no manual load required). Both are overwritten on
+   every download, same filename-per-overwrite pattern as xcomps.
+5. A separate "get waypoints" action downloads the contest's SeeYou `.cup`
+   waypoint file once per contest (the turnpoint set doesn't change day to
+   day) and writes it to the `waypoints/` subfolder under its original
+   filename from the server, falling back to `soaringscoring_waypoint.cup`
+   if the server doesn't supply one.
+6. Which folder(s) you've ticked to write into is remembered across app
+   restarts (nothing is ticked by default — you choose explicitly).
 
 ## Status
 Functional.
@@ -49,6 +59,12 @@ the key is baked in at build time rather than typed in by each person:
    *personal override*, for testing with your own key later — most users
    will never open it.
 
+This one key now carries both the `tasks:read` and `flights:write` scopes, so
+it's also the default for flight uploads. Settings has a second, independent
+override field ("Upload API key") for a pilot who's been issued their own
+separate personal key to test with — leave it blank to just use the same
+key as everything else.
+
 ## Building
 
 Open the project root in Android Studio (Koala or newer). 
@@ -74,12 +90,9 @@ the permission, and read/write through `DocumentFile` from then on.
   worth grouping them or letting the user filter to their own handicap.
 - **No offline cache** — every screen re-fetches. Fine for contest use, but
   a local cache of the last-loaded task would help on bad campsite wifi.
-- **No waypoint/airspace download** — xcomps also ships `.cup` waypoints and
-  airspace files; SoaringScoring's public API doesn't expose airspace, and
-  waypoints would come from the `seeyouCup` file if wanted later.
-- **Class filtering** — right now all classes' tasks show in one list; for a
-  multi-class contest you'll likely want a class picker so you're not
-  scrolling past tasks that aren't yours.
+- **No airspace download** — SoaringScoring's public API doesn't expose
+  airspace files, only task/waypoint files (waypoint `.cup` download is
+  implemented; see "What it does" above).
 - **Folder permission can be revoked by the OS** on reinstall/storage
   changes — worth adding a "recheck access" step on launch that silently
   re-prompts if the persisted URI permission is gone.

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,6 +27,7 @@ fun ContestListScreen(
     state: AppUiState,
     onContestClick: (Contest) -> Unit,
     onSettingsClick: () -> Unit,
+    onUploadClick: () -> Unit,
     onRetry: () -> Unit,
     onToggleFolder: (TargetFolder) -> Unit,
     onSelectTimeFrame: (ContestTimeFrame) -> Unit
@@ -35,6 +37,9 @@ fun ContestListScreen(
             TopAppBar(
                 title = { Text("SS Task Loader") },
                 actions = {
+                    IconButton(onClick = onUploadClick) {
+                        Icon(Icons.Filled.UploadFile, contentDescription = "Upload flight")
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
