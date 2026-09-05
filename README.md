@@ -8,6 +8,12 @@ straight into XCSoar (and XCSoar Jet), so you don't have to download and copy a
 Same idea as XComps, just built native (Kotlin + Jetpack Compose) against SoaringScoring
 instead of SoaringSpot/GlideAndSeek.
 
+<img width="1080" height="2270" alt="XCSS_Home" src="https://github.com/user-attachments/assets/527633c1-8ed4-435a-89c6-c1f6436ecd21" />
+<img width="1080" height="2270" alt="XCSS_Tasks" src="https://github.com/user-attachments/assets/c0187e48-18e2-4b9d-aa14-aeb8352a756f" />
+<img width="1080" height="2270" alt="XCSS_Upload" src="https://github.com/user-attachments/assets/a21ce0c9-8b01-404d-800f-ce743305ea01" />
+
+
+
 ## What it does
 
 1. Lists contests from `GET /api/v1/public/contests` (no key needed).
