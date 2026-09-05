@@ -1,11 +1,11 @@
-package com.soaringscoring.taskloader.ui.screens
+package com.soaringscoring.xcsoaringscoring.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,8 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.soaringscoring.taskloader.BuildConfig
-import com.soaringscoring.taskloader.ui.AppUiState
+import com.soaringscoring.xcsoaringscoring.BuildConfig
+import com.soaringscoring.xcsoaringscoring.ui.AppUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +48,7 @@ fun SettingsScreen(
                 },
                 actions = {
                     IconButton(onClick = { showHelp = true }) {
-                        Icon(Icons.Filled.HelpOutline, contentDescription = "Help")
+                        Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "Help")
                     }
                 }
             )

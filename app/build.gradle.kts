@@ -26,19 +26,18 @@ val ssDustDevilClientKeyId: String = localProperties.getProperty("ss.dustDevilCl
 
 // DustDevil.cloud sign-in redirect scheme/host - the single source of truth, also used
 // below to fill in the manifest's intent-filter data element via manifestPlaceholders.
-// Deliberately not derived from applicationId - see DEVELOPMENT.md's "DustDevil.cloud
-// sign-in" section for why (the applicationId is due to be renamed as part of the app's
-// XCSoaringScoring rebrand, and tying a registered redirect URI to it would mean
-// re-registering later).
+// Deliberately NOT derived from applicationId (see DEVELOPMENT.md's "DustDevil.cloud
+// sign-in" section) - which is exactly why the app's rename to XCSoaringScoring
+// (applicationId below) required no change here and no re-registration with the dev.
 val oauthRedirectScheme = "xcsoaringscoring"
 val oauthRedirectHost = "oauth-callback"
 
 android {
-    namespace = "com.soaringscoring.taskloader"
+    namespace = "com.soaringscoring.xcsoaringscoring"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.soaringscoring.taskloader"
+        applicationId = "com.soaringscoring.xcsoaringscoring"
         minSdk = 26
         targetSdk = 34
         // Bump BOTH on every release you publish anywhere (GitHub, F-Droid, etc).
@@ -86,7 +85,7 @@ android {
         val variant = this
         outputs.all {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            output.outputFileName = "SSTaskLoader-${variant.versionName}-${variant.name}.apk"
+            output.outputFileName = "XCSoaringScoring-${variant.versionName}-${variant.name}.apk"
         }
     }
 }

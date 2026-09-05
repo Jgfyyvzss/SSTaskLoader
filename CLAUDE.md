@@ -25,7 +25,7 @@ download-and-copy routine during gliding competitions.
 ## Where things live
 
 ```
-app/src/main/java/com/soaringscoring/taskloader/
+app/src/main/java/com/soaringscoring/xcsoaringscoring/
   api/              SoaringScoringApi.kt (OkHttp client), Models.kt (all @Serializable data classes)
   data/             SettingsRepository.kt - DataStore-backed settings (API
                      keys, entry address, media tree URI, which target
@@ -130,13 +130,13 @@ wrapper actually invokes Gradle 8.7 first (see Gotchas).
     retirement above actually happens.
 
 12. **The OAuth redirect scheme (`xcsoaringscoring://oauth-callback`) is
-    deliberately NOT derived from the current applicationId
-    (`com.soaringscoring.taskloader`).** The repo/app is being renamed to
-    XCSoaringScoring but the applicationId hasn't been migrated yet ("not just
-    yet" per the project owner) - tying the registered redirect URI to a
-    package name that's due to change would mean re-registering it with the
-    SoaringScoring dev later. The scheme tracks the new product name instead,
-    so it survives the eventual package rename unchanged.
+    deliberately NOT derived from applicationId.** This paid off: the app was
+    renamed from `com.soaringscoring.taskloader` to
+    `com.soaringscoring.xcsoaringscoring` (2026-09-05, alongside the
+    repo/product rename to XCSoaringScoring) with zero impact on the redirect
+    scheme - no re-registration with the SoaringScoring dev needed, since it
+    was never tied to the package name in the first place. Keep it that way if
+    the applicationId ever changes again.
 
 13. **DustDevil sign-in must use the app's own built-in key
     (`BuildConfig.SS_API_KEY`) end-to-end, never the effective/override key.**
@@ -147,6 +147,16 @@ wrapper actually invokes Gradle 8.7 first (see Gotchas).
     personal API key override that can differ from the built-in key, the
     "Sign in with SoaringScoring" action is hidden/disabled whenever a
     personal override is set, rather than silently using the wrong key.
+
+14. **applicationId changed (2026-09-05): `com.soaringscoring.taskloader` →
+    `com.soaringscoring.xcsoaringscoring`.** Android treats this as a
+    different app, not an upgrade - any device with the old build installed
+    needs to uninstall it before installing a new one; DataStore-persisted
+    settings (API key, ticked folders, DustDevil session) are lost, not
+    migrated. Done now deliberately, before any public store listing or the
+    DustDevil redirect URI being registered, since it only gets more
+    disruptive later. Don't assume a device with the old app still installed
+    will "just update."
 
 ## Conventions
 

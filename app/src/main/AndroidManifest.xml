@@ -9,14 +9,14 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
-        android:theme="@style/Theme.SSTaskLoader"
+        android:theme="@style/Theme.XCSoaringScoring"
         android:supportsRtl="true">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.SSTaskLoader">
+            android:theme="@style/Theme.XCSoaringScoring">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

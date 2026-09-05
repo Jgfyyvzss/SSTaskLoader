@@ -1,4 +1,6 @@
-# SS Task Loader
+# XCSoaringScoring
+
+_(originally "SS Task Loader")_
 
 A small Android app largely based on [XComps](https://github.com/DanielDe8/xcomps) 
 that loads task files from [SoaringScoring](https://soaringscoring.com)'s Public API 
@@ -39,7 +41,7 @@ Functional.
 ## Project layout
 
 ```
-app/src/main/java/com/soaringscoring/taskloader/
+app/src/main/java/com/soaringscoring/xcsoaringscoring/
   api/                  OkHttp client + data models for the Public API
   data/SettingsRepository.kt   DataStore: API key, last contest, saved folder tree URI
   storage/XcsoarFolderStore.kt SAF folder scan + file write

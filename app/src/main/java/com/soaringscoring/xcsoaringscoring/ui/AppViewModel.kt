@@ -1,22 +1,22 @@
-package com.soaringscoring.taskloader.ui
+package com.soaringscoring.xcsoaringscoring.ui
 
 import android.app.Application
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.soaringscoring.taskloader.BuildConfig
-import com.soaringscoring.taskloader.api.ApiResult
-import com.soaringscoring.taskloader.api.Contest
-import com.soaringscoring.taskloader.api.ContestClass
-import com.soaringscoring.taskloader.api.DustDevilEntry
-import com.soaringscoring.taskloader.api.DustDevilPilot
-import com.soaringscoring.taskloader.api.SoaringScoringApi
-import com.soaringscoring.taskloader.api.TaskRow
-import com.soaringscoring.taskloader.api.UploadResult
-import com.soaringscoring.taskloader.data.SettingsRepository
-import com.soaringscoring.taskloader.storage.IgcFile
-import com.soaringscoring.taskloader.storage.XcsoarFolderStore
+import com.soaringscoring.xcsoaringscoring.BuildConfig
+import com.soaringscoring.xcsoaringscoring.api.ApiResult
+import com.soaringscoring.xcsoaringscoring.api.Contest
+import com.soaringscoring.xcsoaringscoring.api.ContestClass
+import com.soaringscoring.xcsoaringscoring.api.DustDevilEntry
+import com.soaringscoring.xcsoaringscoring.api.DustDevilPilot
+import com.soaringscoring.xcsoaringscoring.api.SoaringScoringApi
+import com.soaringscoring.xcsoaringscoring.api.TaskRow
+import com.soaringscoring.xcsoaringscoring.api.UploadResult
+import com.soaringscoring.xcsoaringscoring.data.SettingsRepository
+import com.soaringscoring.xcsoaringscoring.storage.IgcFile
+import com.soaringscoring.xcsoaringscoring.storage.XcsoarFolderStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -479,7 +479,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(igcFilesLoading = true)
             val found = withContext(Dispatchers.IO) {
-                selectedFolders.flatMap { XcsoarFolderStore.findIgcFiles(getApplication(), it.doc) }
+                selectedFolders.flatMap { XcsoarFolderStore.findIgcFiles(it.doc) }
             }
             _uiState.value = _uiState.value.copy(
                 igcFiles = found.sortedByDescending { it.doc.lastModified() },

@@ -151,11 +151,12 @@ against DustDevil.
   which is the RFC 8252-style native-app-OAuth convention specifically
   because it's collision-resistant against other apps' custom schemes
   (Android doesn't enforce scheme uniqueness). Rejected that option here for
-  two reasons: (1) it would bake in `com.soaringscoring.taskloader`, the
-  *current* applicationId, which is itself scheduled to change as part of
-  the app's rename to XCSoaringScoring ("not just yet" per the project
-  owner) - registering a redirect URI tied to a package name we're about to
-  retire means re-registering it with the dev later; (2) a reverse-domain
+  two reasons: (1) it would have baked in `com.soaringscoring.taskloader`,
+  the applicationId *at the time* - which was indeed renamed shortly after
+  (2026-09-05, to `com.soaringscoring.xcsoaringscoring` - see "Project/display
+  name" below) precisely as anticipated, validating the decision to decouple
+  the two; a reverse-domain scheme would have needed re-registering with the
+  dev at that point, this one didn't; (2) a reverse-domain
   scheme is meant to signal a domain *you* control, but our applicationId is
   already borrowed from SoaringScoring's own name rather than a domain we
   own, so the collision-resistance argument doesn't carry the usual weight
@@ -273,7 +274,7 @@ pattern).
 1. Bump `versionCode` (+1, never reuse) and `versionName` in
    `app/build.gradle.kts` (skip both for a genuine first release).
 2. Build → Generate Signed Bundle/APK → release variant. Output filename is
-   auto-versioned (`SSTaskLoader-<versionName>-release.apk`) via a Gradle
+   auto-versioned (`XCSoaringScoring-<versionName>-release.apk`) via a Gradle
    `applicationVariants.all` hook.
 3. GitHub → Releases → Draft a new release → tag `vX.Y.Z` against `main` →
    attach the signed APK → publish.
@@ -298,11 +299,16 @@ pattern).
 - **Custom launcher icon** - currently a hand-drawn top-down glider silhouette
   vector (banked, gull-wing style), replaceable via Android Studio's Vector
   Asset tool or by generating new VectorDrawable XML directly.
-- **Project/display name** - the GitHub repo has been renamed to
-  XCSoaringScoring, but the Android `applicationId`
-  (`com.soaringscoring.taskloader`), package structure, and app label
-  (`app_name` string resource) haven't been migrated yet - "not just yet"
-  per the project owner. Don't assume the repo name and the in-app/package
-  naming are in sync; the DustDevil redirect scheme was deliberately chosen
-  to not depend on this rename happening first (see the sign-in section
-  above).
+- ~~**Project/display name**~~ - **Done (2026-09-05).** Full rename from
+  SS Task Loader/SSTaskLoader to XCSoaringScoring, matching the GitHub repo
+  rename: Kotlin package + `namespace` + `applicationId`
+  (`com.soaringscoring.taskloader` → `com.soaringscoring.xcsoaringscoring`),
+  `app_name` string resource, Gradle root project name, `Theme.SSTaskLoader` →
+  `Theme.XCSoaringScoring`, release APK filename prefix, and the
+  `proguard-rules.pro` keep rule (easy to miss - it hardcodes the old
+  package path and silently stops matching on a rename, which only bites on
+  a minified release build). The applicationId change means any device with
+  the old build installed needs a fresh install, not an in-place update -
+  see CLAUDE.md gotcha 14. The DustDevil redirect scheme was deliberately
+  chosen not to depend on this rename (see the sign-in section above) and
+  needed no changes.

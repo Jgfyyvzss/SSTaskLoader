@@ -1,4 +1,4 @@
-package com.soaringscoring.taskloader.api
+package com.soaringscoring.xcsoaringscoring.api
 
 import kotlinx.serialization.Serializable
 

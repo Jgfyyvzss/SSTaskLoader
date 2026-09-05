@@ -1,4 +1,4 @@
-package com.soaringscoring.taskloader.ui.screens
+package com.soaringscoring.xcsoaringscoring.ui.screens
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -18,10 +18,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.soaringscoring.taskloader.api.DustDevilEntry
-import com.soaringscoring.taskloader.storage.IgcFile
-import com.soaringscoring.taskloader.ui.AppUiState
-import com.soaringscoring.taskloader.ui.UploadOutcome
+import com.soaringscoring.xcsoaringscoring.api.DustDevilEntry
+import com.soaringscoring.xcsoaringscoring.storage.IgcFile
+import com.soaringscoring.xcsoaringscoring.ui.AppUiState
+import com.soaringscoring.xcsoaringscoring.ui.UploadOutcome
 import java.text.DateFormat
 import java.util.Date
 
