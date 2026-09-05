@@ -28,8 +28,6 @@ download-and-copy routine during gliding competitions.
 app/src/main/java/com/soaringscoring/taskloader/
   api/              SoaringScoringApi.kt (OkHttp client), Models.kt (all @Serializable data classes)
   data/             SettingsRepository.kt - DataStore-backed settings
-                     (API keys, entry address, media tree URI, and which
-                     target folders are ticked)
   storage/          XcsoarFolderStore.kt - all SAF folder/file resolution logic
   ui/               AppViewModel.kt (single ViewModel, single AppUiState) +
                      ContestGrouping.kt (date categorization/grouping/filtering, pure functions)
@@ -100,20 +98,21 @@ wrapper actually invokes Gradle 8.7 first (see Gotchas).
    it's present; the Settings screen's "personal override" field is the
    fallback path for any build that doesn't have it baked in.
 
-9. **This one key now covers both `tasks:read` and `flights:write`** - flight
-   uploads default to the same effective key as task/contest reads
-   (`state.uploadApiKey.ifBlank { state.apiKey }` in `AppViewModel`). The
-   "Upload API key" Settings field is an optional personal override only,
-   not a required separate credential - don't reintroduce a hard requirement
-   for it without confirming the scopes have been split again on the API
-   side.
-
-10. **When editing multiple files for one change, keep them together.** This
+9. **When editing multiple files for one change, keep them together.** This
    project's update workflow has been: edit files here, zip just the changed
    ones, drag into the GitHub repo. A partial set (e.g. a UI file added in one
    update, its ViewModel wiring in another, applied out of order across
    branches) has caused real regressions - see DEVELOPMENT.md's "Known
    incidents" for a concrete example.
+
+10. **IGC upload's current manual key/address entry is likely to be replaced,
+    not extended.** The implemented version (personal `flights:write` key +
+    hand-typed `{competitionNumber}-{contestKey}` address in Settings) is a v1.
+    A DustDevil.cloud OAuth sign-in flow is proposed to replace both fields
+    entirely - see DEVELOPMENT.md's "DustDevil.cloud sign-in" section before
+    building anything further on top of the manual approach. Check whether
+    that proposal has since been implemented, agreed, or dropped before
+    assuming the current Settings fields are the long-term design.
 
 ## Conventions
 
