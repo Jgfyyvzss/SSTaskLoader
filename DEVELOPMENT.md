@@ -21,6 +21,14 @@ most of this app's users never need to touch an API key at all. That key is
 baked in via `local.properties` → `BuildConfig.SS_API_KEY` at build time, and
 is deliberately never committed to git.
 
+That key originally only had `tasks:read`, so flight uploads needed a
+separate personal `flights:write` key entered in Settings. SoaringScoring has
+since merged both scopes onto the one existing key, so uploads now default to
+the same effective key as everything else (`AppViewModel.confirmUpload()`:
+`state.uploadApiKey.ifBlank { state.apiKey }`). The "Upload API key" Settings
+field is now just an optional personal override, parallel to the general
+"API key override" field, not a required separate credential.
+
 This creates a real tension with F-Droid distribution: F-Droid builds strictly
 from public source with no access to private secrets, so an F-Droid-built copy
 would always compile with an empty key, and every F-Droid user would need to
@@ -40,26 +48,33 @@ no ads, no trackers, no Google Play Services, every dependency is Apache 2.0
 ## Feature history (roughly chronological)
 
 - **Task download** - fetch a contest's tasks, download the XCSoar `.tsk` for
-  a selected task, write to the correct XCSoar folder(s).
+  a selected task, write to the correct XCSoar folder(s) under two names:
+  `soaringscoring_task.tsk` (the stable name loaded by hand on day one) and
+  `default.tsk` (the name XCSoar auto-loads on startup, so later comp days
+  only need the download, no manual load).
 - **Multi-folder support** - tick XCSoar and/or XCSoar Jet; writes go to every
-  ticked folder.
+  ticked folder. Nothing is ticked by default (opt-in, not opt-out), and the
+  tick state persists across app restarts via `SettingsRepository` (keyed by
+  folder URI).
 - **Contest categorization & drill-down** - Current/Future/Past tabs
   (`ContestGrouping.categorize`), month-grouped lists matching SoaringScoring's
   own site, card-based UI, class-selection chips, timeframe-aware task
   filtering (Current shows only today's/most-recent task; Future/Past show
   everything for the selected class).
 - **Waypoint download** - one action per contest (not per task, since the
-  turnpoint set doesn't change day to day), writes `soaringscoring_waypoint.cup`
-  to the `waypoints`/`Waypoints` subfolder (falls back to root on older
-  XCSoar versions with no such folder).
+  turnpoint set doesn't change day to day), writes to the `waypoints`/
+  `Waypoints` subfolder (falls back to root on older XCSoar versions with no
+  such folder) under the file's original server-supplied name (read from
+  `Content-Disposition`, falling back to the download URL's last path
+  segment, then to `soaringscoring_waypoint.cup` if neither is usable).
 - **IGC flight upload** - separate top-level screen (not folded into the
   contest drill-down, since a pilot's entry address has no discoverable link
-  to a specific contest via the API). Requires the pilot's *own* personal
-  `flights:write`-scoped key plus their `{competitionNumber}-{contestKey}`
-  entry address, both entered once in Settings. Browses `.igc` files from the
-  `logs`/`Logs` subfolder across every selected XCSoar folder, confirms before
-  sending, shows a dedicated result dialog (not a snackbar) given the real
-  stakes of a flight-scoring upload.
+  to a specific contest via the API). Defaults to the same API key as
+  everything else (see "the API key tension" above); only needs the pilot's
+  `{competitionNumber}-{contestKey}` entry address entered once in Settings.
+  Browses `.igc` files from the `logs`/`Logs` subfolder across every selected
+  XCSoar folder, confirms before sending, shows a dedicated result dialog
+  (not a snackbar) given the real stakes of a flight-scoring upload.
 
 ## Known incidents worth remembering
 
@@ -105,8 +120,12 @@ no ads, no trackers, no Google Play Services, every dependency is Apache 2.0
 
 ## Open items / roadmap
 
-- **In-app help** - planned: a brief help entry in Settings (dialog, not a
-  full screen) covering first-run setup and where files land. Not yet built.
+- **In-app help** - a minimal "Getting started" dialog now lives behind the
+  help icon in Settings' top bar (`HelpDialog` in `SettingsScreen.kt`),
+  covering first-run setup and where files land in plain generic terms.
+  Deliberately kept brief and content-light for now since it's expected to
+  need rewording as real usage surfaces gaps - don't over-invest in wording
+  polish here yet.
 - **IGC upload - single entry address only.** Settings stores one default
   address; a pilot flying multiple contests in a season would need to update
   it each time. Extending to multiple stored addresses (keyed per contest) is

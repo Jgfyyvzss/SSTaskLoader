@@ -7,6 +7,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -56,7 +58,7 @@ class SoaringScoringApi(
         }
 
     /** [relativeOrAbsoluteUrl] is one of the `files.*` URLs returned by getTasks(). */
-    suspend fun downloadTaskFile(relativeOrAbsoluteUrl: String, apiKey: String): ApiResult<ByteArray> {
+    suspend fun downloadTaskFile(relativeOrAbsoluteUrl: String, apiKey: String): ApiResult<DownloadedFile> {
         val url = if (relativeOrAbsoluteUrl.startsWith("http")) {
             relativeOrAbsoluteUrl
         } else {
@@ -76,12 +78,74 @@ class SoaringScoringApi(
                     if (bytes == null) {
                         ApiResult.Failure("Empty response body", resp.code)
                     } else {
-                        ApiResult.Success(bytes)
+                        ApiResult.Success(DownloadedFile(bytes, fileNameFromResponse(resp, url)))
                     }
                 }
             } catch (e: IOException) {
                 ApiResult.Failure("Network error: ${e.message}")
             }
+        }
+    }
+
+    /**
+     * Prefers the server-declared filename from `Content-Disposition` (the
+     * source of truth for "the file's original name"); falls back to the last
+     * segment of the download URL if that header is missing, since that's
+     * still normally the real filename for these endpoints.
+     */
+    private fun fileNameFromResponse(resp: okhttp3.Response, url: String): String? {
+        resp.header("Content-Disposition")?.let { disposition ->
+            filenameFromContentDisposition(disposition)?.let { return it }
+        }
+        return url.substringBefore('?').substringAfterLast('/').takeIf { it.isNotBlank() }
+    }
+
+    private fun filenameFromContentDisposition(disposition: String): String? {
+        val starMatch = Regex("filename\\*=(?:UTF-8'')?([^;]+)", RegexOption.IGNORE_CASE).find(disposition)
+        val rawValue = starMatch?.groupValues?.get(1)
+            ?: Regex("filename=\"?([^\";]+)\"?", RegexOption.IGNORE_CASE).find(disposition)?.groupValues?.get(1)
+        return rawValue?.trim()?.let {
+            try {
+                java.net.URLDecoder.decode(it, "UTF-8")
+            } catch (e: Exception) {
+                it
+            }
+        }?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Uploads an IGC flight log. [localPart] is the pilot's own
+     * {competitionNumber}-{contestKey} entry address; [apiKey] is the pilot's own
+     * personal key with the `flights:write` scope - both distinct from the app's
+     * built-in `tasks:read` key used everywhere else in this client.
+     */
+    suspend fun uploadFlight(
+        localPart: String,
+        apiKey: String,
+        igcBytes: ByteArray,
+        filename: String
+    ): ApiResult<UploadResult> = withContext(Dispatchers.IO) {
+        try {
+            val body = igcBytes.toRequestBody("application/octet-stream".toMediaType())
+            val request = Request.Builder()
+                .url("$baseUrl/entries/$localPart/igc")
+                .header("Authorization", "Bearer $apiKey")
+                .header("X-Igc-Filename", filename)
+                .post(body)
+                .build()
+            client.newCall(request).execute().use { resp ->
+                val bodyString = resp.body?.string().orEmpty()
+                if (!resp.isSuccessful) {
+                    return@use failureFrom(resp.code, bodyString)
+                }
+                try {
+                    ApiResult.Success(json.decodeFromString(UploadResponse.serializer(), bodyString).upload)
+                } catch (e: Exception) {
+                    ApiResult.Failure("Could not parse response: ${e.message}", resp.code)
+                }
+            }
+        } catch (e: IOException) {
+            ApiResult.Failure("Network error: ${e.message}")
         }
     }
 
