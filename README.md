@@ -84,17 +84,10 @@ the permission, and read/write through `DocumentFile` from then on.
 
 ## Known limitations / good next steps
 
-- **DHT (Distance-Handicap) days** aren't handled specially yet — the API
-  returns one row per glider handicap for those, with `dhtHandicap` /
-  `dhtDistanceKm` set. Right now they just show up as extra rows; it'd be
-  worth grouping them or letting the user filter to their own handicap.
+- **DHT (Distance-Handicap) days** Right now they just show up as rows under the class; it might be
+  worth letting the user filter to their own handicap, but it works OK as-is.
 - **No offline cache** — every screen re-fetches. Fine for contest use, but
   a local cache of the last-loaded task would help on bad campsite wifi.
-- **No airspace download** — SoaringScoring's public API doesn't expose
-  airspace files, only task/waypoint files (waypoint `.cup` download is
-  implemented; see "What it does" above).
 - **Folder permission can be revoked by the OS** on reinstall/storage
   changes — worth adding a "recheck access" step on launch that silently
   re-prompts if the persisted URI permission is gone.
-- **App icon** — manifest currently omits `android:icon` so it builds without
-  extra asset work; add a real launcher icon before you publish anywhere.
