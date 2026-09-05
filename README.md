@@ -1,4 +1,4 @@
-# SS Task Loader
+# XCSoaringScoring
 
 A small Android app largely based on [XComps](https://github.com/DanielDe8/xcomps) 
 that loads task files from [SoaringScoring](https://soaringscoring.com)'s Public API 
