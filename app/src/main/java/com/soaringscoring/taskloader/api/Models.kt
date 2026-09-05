@@ -84,6 +84,8 @@ data class UploadResult(
 @Serializable
 data class UploadResponse(val upload: UploadResult)
 
+class DownloadedFile(val bytes: ByteArray, val fileName: String?)
+
 sealed class ApiResult<out T> {
     data class Success<T>(val data: T) : ApiResult<T>()
     data class Failure(val message: String, val httpCode: Int? = null, val code: String? = null) : ApiResult<Nothing>()

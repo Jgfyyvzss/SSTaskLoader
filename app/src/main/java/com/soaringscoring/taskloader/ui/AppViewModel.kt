@@ -215,23 +215,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         )
         _uiState.value = _uiState.value.copy(mediaTreeUri = uri)
-        viewModelScope.launch { settings.setMediaTreeUri(uri.toString()) }
-        refreshTargetFolders(uri)
+        viewModelScope.launch {
+            settings.setMediaTreeUri(uri.toString())
+            refreshTargetFolders(uri)
+        }
     }
 
-    private fun refreshTargetFolders(uri: Uri) {
+    private suspend fun refreshTargetFolders(uri: Uri) {
         val found = XcsoarFolderStore.findXcsoarFolders(getApplication(), uri)
+        val savedSelection = settings.selectedFolderUris.first()
         _uiState.value = _uiState.value.copy(
-            targetFolders = found.map { TargetFolder(it, selected = true) }
+            targetFolders = found.map { TargetFolder(it, selected = it.uri.toString() in savedSelection) }
         )
     }
 
     fun toggleFolderSelected(doc: DocumentFile) {
-        _uiState.value = _uiState.value.copy(
-            targetFolders = _uiState.value.targetFolders.map {
-                if (it.doc.uri == doc.uri) it.copy(selected = !it.selected) else it
-            }
-        )
+        val updated = _uiState.value.targetFolders.map {
+            if (it.doc.uri == doc.uri) it.copy(selected = !it.selected) else it
+        }
+        _uiState.value = _uiState.value.copy(targetFolders = updated)
+        viewModelScope.launch {
+            settings.setSelectedFolderUris(updated.filter { it.selected }.map { it.doc.uri.toString() }.toSet())
+        }
     }
 
     // --- Download ---
@@ -254,13 +259,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 is ApiResult.Success -> {
                     var okCount = 0
                     selectedFolders.forEach { folder ->
-                        val ok = XcsoarFolderStore.writeTaskFile(
+                        // Written under both names: soaringscoring_task.tsk is the
+                        // stable name pilots load as the current task by hand on day
+                        // one; default.tsk is the name XCSoar auto-loads on startup,
+                        // so every day after that just needs the download, no manual
+                        // load required.
+                        val savedStableName = XcsoarFolderStore.writeTaskFile(
                             getApplication(),
                             folder.doc,
                             "soaringscoring_task.tsk",
-                            result.data
+                            result.data.bytes
                         )
-                        if (ok) okCount++
+                        val savedDefault = XcsoarFolderStore.writeTaskFile(
+                            getApplication(),
+                            folder.doc,
+                            "default.tsk",
+                            result.data.bytes
+                        )
+                        if (savedStableName && savedDefault) okCount++
                     }
                     _uiState.value = _uiState.value.copy(
                         downloadingTaskId = null,
@@ -308,13 +324,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value = _uiState.value.copy(downloadingWaypoints = true, statusMessage = null)
             when (val result = api.downloadTaskFile(sourceTask.files.seeyouCup, key)) {
                 is ApiResult.Success -> {
+                    val fileName = result.data.fileName?.takeIf { it.isNotBlank() }
+                        ?: "soaringscoring_waypoint.cup"
                     var okCount = 0
                     selectedFolders.forEach { folder ->
                         val ok = XcsoarFolderStore.writeWaypointFile(
                             getApplication(),
                             folder.doc,
-                            "soaringscoring_waypoint.cup",
-                            result.data
+                            fileName,
+                            result.data.bytes
                         )
                         if (ok) okCount++
                     }
@@ -375,13 +393,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun confirmUpload() {
         val state = _uiState.value
         val file = state.pendingUploadFile ?: return
-        val key = state.uploadApiKey
+        // SoaringScoring's API key now carries both tasks:read and flights:write
+        // scopes, so uploads default to the same effective key as everything
+        // else. uploadApiKey is only a personal override for pilots issued
+        // their own separate key to test with.
+        val key = state.uploadApiKey.ifBlank { state.apiKey }
         val address = state.entryAddress
 
-        if (key.isBlank() || address.isBlank()) {
+        if (key.isBlank()) {
             _uiState.value = state.copy(
                 pendingUploadFile = null,
-                uploadOutcome = UploadOutcome.Failure("Set your upload API key and entry address in Settings first.")
+                uploadOutcome = UploadOutcome.Failure("No API key available. Add one in Settings.")
+            )
+            return
+        }
+        if (address.isBlank()) {
+            _uiState.value = state.copy(
+                pendingUploadFile = null,
+                uploadOutcome = UploadOutcome.Failure("Set your entry address in Settings first.")
             )
             return
         }

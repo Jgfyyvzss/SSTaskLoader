@@ -58,7 +58,7 @@ class SoaringScoringApi(
         }
 
     /** [relativeOrAbsoluteUrl] is one of the `files.*` URLs returned by getTasks(). */
-    suspend fun downloadTaskFile(relativeOrAbsoluteUrl: String, apiKey: String): ApiResult<ByteArray> {
+    suspend fun downloadTaskFile(relativeOrAbsoluteUrl: String, apiKey: String): ApiResult<DownloadedFile> {
         val url = if (relativeOrAbsoluteUrl.startsWith("http")) {
             relativeOrAbsoluteUrl
         } else {
@@ -78,13 +78,39 @@ class SoaringScoringApi(
                     if (bytes == null) {
                         ApiResult.Failure("Empty response body", resp.code)
                     } else {
-                        ApiResult.Success(bytes)
+                        ApiResult.Success(DownloadedFile(bytes, fileNameFromResponse(resp, url)))
                     }
                 }
             } catch (e: IOException) {
                 ApiResult.Failure("Network error: ${e.message}")
             }
         }
+    }
+
+    /**
+     * Prefers the server-declared filename from `Content-Disposition` (the
+     * source of truth for "the file's original name"); falls back to the last
+     * segment of the download URL if that header is missing, since that's
+     * still normally the real filename for these endpoints.
+     */
+    private fun fileNameFromResponse(resp: okhttp3.Response, url: String): String? {
+        resp.header("Content-Disposition")?.let { disposition ->
+            filenameFromContentDisposition(disposition)?.let { return it }
+        }
+        return url.substringBefore('?').substringAfterLast('/').takeIf { it.isNotBlank() }
+    }
+
+    private fun filenameFromContentDisposition(disposition: String): String? {
+        val starMatch = Regex("filename\\*=(?:UTF-8'')?([^;]+)", RegexOption.IGNORE_CASE).find(disposition)
+        val rawValue = starMatch?.groupValues?.get(1)
+            ?: Regex("filename=\"?([^\";]+)\"?", RegexOption.IGNORE_CASE).find(disposition)?.groupValues?.get(1)
+        return rawValue?.trim()?.let {
+            try {
+                java.net.URLDecoder.decode(it, "UTF-8")
+            } catch (e: Exception) {
+                it
+            }
+        }?.takeIf { it.isNotBlank() }
     }
 
     /**

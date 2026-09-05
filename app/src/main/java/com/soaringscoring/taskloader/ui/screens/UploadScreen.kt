@@ -49,12 +49,12 @@ fun UploadScreen(
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
-                state.uploadApiKey.isBlank() || state.entryAddress.isBlank() -> Box(
+                state.entryAddress.isBlank() -> Box(
                     Modifier.fillMaxSize().padding(24.dp)
                 ) {
                     Text(
-                        "Set your upload API key and entry address in Settings first — " +
-                            "these are personal to you, separate from the app's built-in key.",
+                        "Set your entry address in Settings first — that's how uploads are " +
+                            "matched to your entry in the contest.",
                         modifier = Modifier.align(Alignment.Center),
                         textAlign = TextAlign.Center
                     )
